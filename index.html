@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Brugg // Paranormal Index</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -13,7 +13,7 @@
             --accent: #6BFF8A; /* Alien Phosphor Green */
             --accent-hazard: #ff3e3e;
             --bg: #0a0a0c;
-            --panel: rgba(15, 15, 20, 0.9);
+            --panel: rgba(15, 15, 20, 0.95);
         }
 
         body {
@@ -22,6 +22,7 @@
             color: #d1d1d1;
             margin: 0;
             overflow: hidden;
+            touch-action: none; /* Prevents bounce on some mobile browsers */
         }
 
         h1, h2, h3, .tech-font {
@@ -38,24 +39,14 @@
 
         /* Minimalist Leaflet Overrides */
         .leaflet-container { background: #000 !important; }
-        .leaflet-bar { border: none !important; }
+        .leaflet-bar { border: 1px solid rgba(107, 255, 138, 0.5) !important; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         .leaflet-bar a { 
             background-color: var(--panel) !important; 
             color: var(--accent) !important; 
-            border: 1px solid rgba(107, 255, 138, 0.2) !important;
-        }
-
-        /* Cinematic UI Overlay */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1000;
-            border: 1px solid rgba(107, 255, 138, 0.1);
-            box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
+            border: none !important;
+            width: 34px !important;
+            height: 34px !important;
+            line-height: 34px !important;
         }
 
         .side-panel {
@@ -75,31 +66,48 @@
             top: 20px;
             right: 20px;
             width: 380px;
-            max-width: calc(100vw - 40px);
             max-height: calc(100vh - 40px);
         }
 
         #manifestPanel {
-            top: 130px;
+            top: 140px;
             left: 20px;
             width: 300px;
-            max-width: calc(100vw - 40px);
             max-height: calc(100vh - 180px);
         }
 
-        .side-panel.hidden { transform: translateX(110%); }
-        #manifestPanel.hidden { transform: translateX(-110%); }
+        .side-panel.hidden { transform: translateX(120%); }
+        #manifestPanel.hidden { transform: translateX(-120%); }
 
-        /* Handle specific horizontal transform for mobile panels */
+        /* Mobile Adjustments */
         @media (max-width: 640px) {
-            #sidePanel.hidden { transform: translateY(110%); }
             #sidePanel {
                 top: auto;
-                bottom: 20px;
-                right: 20px;
-                left: 20px;
-                width: auto;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 20px 20px 0 0;
+                max-height: 70vh;
+                padding: 20px;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
             }
+            #sidePanel.hidden { transform: translateY(100%); }
+            
+            #manifestPanel {
+                top: 100px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                max-height: calc(100vh - 120px);
+            }
+            
+            /* Move Leaflet controls slightly down on mobile to avoid notches */
+            .leaflet-top { top: 10px; }
+            .leaflet-right { right: 10px; }
         }
 
         .scanline {
@@ -116,7 +124,6 @@
             100% { top: 100%; }
         }
 
-        /* Standard Circular Marker */
         .marker-pulse {
             width: 14px;
             height: 14px;
@@ -126,7 +133,6 @@
             animation: pulse 2s infinite;
         }
 
-        /* Creature/Hazard Marker */
         .marker-pulse-hazard {
             width: 18px;
             height: 18px;
@@ -153,7 +159,7 @@
 
         .manifest-item {
             border-bottom: 1px solid rgba(107, 255, 138, 0.1);
-            padding: 10px 0;
+            padding: 12px 0;
             cursor: pointer;
             transition: all 0.2s;
             font-size: 11px;
@@ -170,12 +176,13 @@
             pointer-events: auto;
             background: rgba(107, 255, 138, 0.05);
             border: 1px solid rgba(107, 255, 138, 0.3);
-            padding: 6px 16px;
+            padding: 8px 16px;
             font-family: 'Space Grotesk', sans-serif;
             font-size: 10px;
             color: var(--accent);
             transition: all 0.3s;
             cursor: pointer;
+            text-transform: uppercase;
         }
         .btn-archive:hover {
             background: var(--accent);
@@ -187,7 +194,7 @@
 
     <div class="overlay">
         <div class="scanline"></div>
-        <div class="absolute bottom-10 left-10 tech-font text-[10px] opacity-40 hidden sm:block">
+        <div class="absolute bottom-10 left-10 tech-font text-[10px] opacity-40 hidden md:block">
             LOC_BRUGG_SWITZERLAND // 47.4853° N, 8.2085° E<br>
             STREAMS: ACTIVE // SENSORS: NOMINAL
         </div>
@@ -199,7 +206,7 @@
     <div id="manifestPanel" class="side-panel hidden">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-sm font-bold text-[#6BFF8A] tech-font">Data Manifest</h3>
-            <button onclick="toggleManifest()" class="text-[10px] opacity-50 hover:opacity-100">[ HIDE ]</button>
+            <button onclick="toggleManifest()" class="text-[10px] opacity-50 hover:opacity-100 p-2">[ HIDE ]</button>
         </div>
         <div id="manifestList" class="overflow-y-auto pr-2">
             <!-- Dynamic items populated by JS -->
@@ -209,25 +216,25 @@
     <!-- Detail Panel -->
     <div id="sidePanel" class="side-panel hidden">
         <div class="flex justify-between items-start mb-4">
-            <h2 id="eventTitle" class="text-xl font-bold text-[#6BFF8A]">Select Node</h2>
-            <button onclick="closePanel()" class="text-xs opacity-50 hover:opacity-100">[ CLOSE ]</button>
+            <h2 id="eventTitle" class="text-xl font-bold text-[#6BFF8A] leading-tight pr-4">Select Node</h2>
+            <button onclick="closePanel()" class="text-xs opacity-50 hover:opacity-100 p-2 shrink-0">[ CLOSE ]</button>
         </div>
         <div class="text-[10px] text-[#6BFF8A] mb-4 tech-font opacity-70">
             Subject: <span id="eventSubject">N/A</span><br>
             Coordinates: <span id="eventCoords">N/A</span>
         </div>
-        <div id="eventContent" class="overflow-y-auto text-sm leading-relaxed text-gray-300 border-t border-[#6BFF8A]/20 pt-4">
+        <div id="eventContent" class="overflow-y-auto text-sm leading-relaxed text-gray-300 border-t border-[#6BFF8A]/20 pt-4 pb-4">
             Select a highlighted data point on the map to decrypt historical records.
         </div>
-        <div class="mt-auto pt-6 tech-font text-[9px] opacity-30">
+        <div class="mt-auto pt-4 tech-font text-[9px] opacity-30 border-t border-white/5">
             VERIFIED_RECORD_774-B // ACCESS_PUBLIC // MU-TH-UR
         </div>
     </div>
 
     <!-- Header Overlay -->
-    <div id="mainHeader" class="absolute top-8 left-10 z-[1001] transition-opacity duration-500 pointer-events-auto">
-        <h1 class="text-3xl font-bold text-white mb-1 tracking-tighter">BRUGG <span class="text-[#6BFF8A]">MYTHS</span></h1>
-        <div class="h-[1px] w-40 bg-[#6BFF8A]/40 mb-4"></div>
+    <div id="mainHeader" class="absolute top-6 left-6 z-[1001] transition-opacity duration-500 pointer-events-auto max-w-[80%]">
+        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tighter">BRUGG <span class="text-[#6BFF8A]">MYTHS</span></h1>
+        <div class="h-[1px] w-32 sm:w-40 bg-[#6BFF8A]/40 mb-4"></div>
         <button onclick="toggleManifest()" class="btn-archive">
             OPEN ARCHIVE MANIFEST
         </button>
@@ -249,9 +256,10 @@
             { id: 12, title: "The Black Cat", subject: "Forest Maze Sentinel", coords: [47.491500, 8.204500], content: "A local Bruggerberg myth. A black cat that perches on the shoulders of travelers in the woods. As long as it sits there, you are unable to find the exit.", type: "Creature" }
         ];
 
+        // Moved zoom control to topright to avoid overlapping mobile UI
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([47.485, 8.210], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
         function openEvent(event) {
             document.getElementById('eventTitle').innerText = event.title;
@@ -260,6 +268,9 @@
             document.getElementById('eventContent').innerText = event.content;
             document.getElementById('sidePanel').classList.remove('hidden');
             
+            // Hide manifest when opening detail
+            document.getElementById('manifestPanel').classList.add('hidden');
+
             // Mobile Optimization: Hide Header
             const header = document.getElementById('mainHeader');
             header.classList.add('opacity-0');
@@ -281,6 +292,11 @@
         function toggleManifest() { 
             const manifest = document.getElementById('manifestPanel');
             manifest.classList.toggle('hidden'); 
+            
+            // Ensure detail panel is hidden when manifest opens
+            if (!manifest.classList.contains('hidden')) {
+                document.getElementById('sidePanel').classList.add('hidden');
+            }
         }
 
         const manifestList = document.getElementById('manifestList');
@@ -311,9 +327,10 @@
         });
 
         map.on('click', (e) => {
-            // Only close if not clicking a marker
+            // Check if click target is the map itself
             if (e.originalEvent.target.id === 'map' || e.originalEvent.target.classList.contains('leaflet-container')) {
                 closePanel();
+                document.getElementById('manifestPanel').classList.add('hidden');
             }
         });
     </script>
