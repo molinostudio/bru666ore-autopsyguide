@@ -22,7 +22,7 @@
             color: #d1d1d1;
             margin: 0;
             overflow: hidden;
-            touch-action: none; /* Prevents bounce on some mobile browsers */
+            touch-action: none;
         }
 
         h1, h2, h3, .tech-font {
@@ -37,7 +37,6 @@
             background: #000;
         }
 
-        /* Minimalist Leaflet Overrides */
         .leaflet-container { background: #000 !important; }
         .leaflet-bar { border: 1px solid rgba(107, 255, 138, 0.5) !important; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
         .leaflet-bar a { 
@@ -54,7 +53,7 @@
             background: var(--panel);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(107, 255, 138, 0.2);
-            z-index: 1001;
+            z-index: 2000;
             padding: 24px;
             pointer-events: auto;
             display: flex;
@@ -79,7 +78,6 @@
         .side-panel.hidden { transform: translateX(120%); }
         #manifestPanel.hidden { transform: translateX(-120%); }
 
-        /* Mobile Adjustments */
         @media (max-width: 640px) {
             #sidePanel {
                 top: auto;
@@ -91,12 +89,8 @@
                 border-radius: 20px 20px 0 0;
                 max-height: 70vh;
                 padding: 20px;
-                border-left: none;
-                border-right: none;
-                border-bottom: none;
             }
             #sidePanel.hidden { transform: translateY(100%); }
-            
             #manifestPanel {
                 top: 100px;
                 left: 10px;
@@ -104,10 +98,27 @@
                 width: auto;
                 max-height: calc(100vh - 120px);
             }
-            
-            /* Move Leaflet controls slightly down on mobile to avoid notches */
-            .leaflet-top { top: 10px; }
-            .leaflet-right { right: 10px; }
+        }
+
+        /* Specialized Triangle Indicators */
+        .edge-triangle {
+            position: fixed;
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 16px solid #FFFFFF; /* Solid White */
+            z-index: 1500;
+            opacity: 0.8;
+            pointer-events: auto;
+            cursor: pointer;
+            filter: drop-shadow(0 0 8px #FFFFFF);
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        
+        .edge-triangle:hover {
+            opacity: 1;
+            filter: drop-shadow(0 0 12px #FFFFFF);
         }
 
         .scanline {
@@ -172,7 +183,7 @@
             background: rgba(107, 255, 138, 0.05);
         }
 
-        .btn-archive {
+        .btn-archive, .btn-return {
             pointer-events: auto;
             background: rgba(107, 255, 138, 0.05);
             border: 1px solid rgba(107, 255, 138, 0.3);
@@ -184,9 +195,19 @@
             cursor: pointer;
             text-transform: uppercase;
         }
-        .btn-archive:hover {
+        .btn-archive:hover, .btn-return:hover {
             background: var(--accent);
             color: #000;
+        }
+        
+        .btn-return {
+            border-color: white;
+            color: white;
+            background: rgba(255,255,255,0.05);
+        }
+        .btn-return:hover {
+            background: white;
+            color: black;
         }
     </style>
 </head>
@@ -194,13 +215,12 @@
 
     <div class="overlay">
         <div class="scanline"></div>
-        <div class="absolute bottom-10 left-10 tech-font text-[10px] opacity-40 hidden md:block">
-            LOC_BRUGG_SWITZERLAND // 47.4853° N, 8.2085° E<br>
-            STREAMS: ACTIVE // SENSORS: NOMINAL
-        </div>
     </div>
 
     <div id="map"></div>
+
+    <!-- Directional Indicators Container -->
+    <div id="indicators"></div>
 
     <!-- Manifest Navigation -->
     <div id="manifestPanel" class="side-panel hidden">
@@ -208,15 +228,13 @@
             <h3 class="text-sm font-bold text-[#6BFF8A] tech-font">Data Manifest</h3>
             <button onclick="toggleManifest()" class="text-[10px] opacity-50 hover:opacity-100 p-2">[ HIDE ]</button>
         </div>
-        <div id="manifestList" class="overflow-y-auto pr-2">
-            <!-- Dynamic items populated by JS -->
-        </div>
+        <div id="manifestList" class="overflow-y-auto pr-2"></div>
     </div>
 
     <!-- Detail Panel -->
     <div id="sidePanel" class="side-panel hidden">
         <div class="flex justify-between items-start mb-4">
-            <h2 id="eventTitle" class="text-xl font-bold text-[#6BFF8A] leading-tight pr-4">Select Node</h2>
+            <h2 id="eventTitle" class="text-xl font-bold text-[#6BFF8A] leading-tight pr-4 uppercase">Select Node</h2>
             <button onclick="closePanel()" class="text-xs opacity-50 hover:opacity-100 p-2 shrink-0">[ CLOSE ]</button>
         </div>
         <div class="text-[10px] text-[#6BFF8A] mb-4 tech-font opacity-70">
@@ -227,17 +245,26 @@
             Select a highlighted data point on the map to decrypt historical records.
         </div>
         <div class="mt-auto pt-4 tech-font text-[9px] opacity-30 border-t border-white/5">
-            VERIFIED_RECORD_774-B // ACCESS_PUBLIC // MU-TH-UR
+            VERIFIED_RECORD_774-B // ACCESS_PUBLIC // MU-TH-UR 6000
         </div>
     </div>
 
     <!-- Header Overlay -->
     <div id="mainHeader" class="absolute top-6 left-6 z-[1001] transition-opacity duration-500 pointer-events-auto max-w-[80%]">
-        <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tighter">BRUGG <span class="text-[#6BFF8A]">MYTHS</span></h1>
-        <div class="h-[1px] w-32 sm:w-40 bg-[#6BFF8A]/40 mb-4"></div>
-        <button onclick="toggleManifest()" class="btn-archive">
-            OPEN ARCHIVE MANIFEST
-        </button>
+        <div id="headerContent">
+            <h1 class="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tighter">BRUGG <span class="text-[#6BFF8A]">MYTHS</span></h1>
+            <div class="h-[1px] w-32 sm:w-40 bg-[#6BFF8A]/40 mb-4"></div>
+            <button onclick="toggleManifest()" class="btn-archive">
+                OPEN ARCHIVE MANIFEST
+            </button>
+        </div>
+        
+        <!-- Return to Brugg Button (Hidden by default) -->
+        <div id="returnBox" class="hidden mt-2">
+            <button onclick="returnToBrugg()" class="btn-return">
+                RETURN TO BRUGG
+            </button>
+        </div>
     </div>
 
     <script>
@@ -252,14 +279,23 @@
             { id: 8, title: "The Pope of Dross", subject: "The Great Comic Book Fire", coords: [47.483293, 8.207236], content: "In 1965, authorities held a public 'cleansing' of comic books. The phantom scent of scorched paper is said to linger near the site during dry evenings.", type: "Historical Cleansing" },
             { id: 9, title: "The Chlauschlöpfen", subject: "The Midnight Whip-Crackers", coords: [47.4852, 8.2076], content: "Ancient tradition where deafening whip-cracks echo through the streets to drive away winter spirits. Rhythmic and thunderous, it serves as a warning to both spirits and strangers.", type: "Ancient Ritual" },
             { id: 10, title: "The Rollibock", subject: "The Glacier Guardian", coords: [47.495050, 8.215560], content: "Massive ice-encrusted goat-like entity with glowing eyes. Protectors of nature, it punishes those who mistreat the environment with terrifying roars and clattering ice shards.", type: "Creature" },
-            { id: 11, title: "The Night Folk", subject: "Das Nachtvolk Procession", coords: [47.485150, 8.207800], content: "Spectral midnight procession of the recently deceased observed near the Stadtkirche. Witnessing your own doppelgänger in the line is a death sentence within six weeks.", type: "Creature" },
-            { id: 12, title: "The Black Cat", subject: "Forest Maze Sentinel", coords: [47.491500, 8.204500], content: "A local Bruggerberg myth. A black cat that perches on the shoulders of travelers in the woods. As long as it sits there, you are unable to find the exit.", type: "Creature" }
+            { id: 11, title: "The Youth Army", subject: "Civil Defense Tradition", coords: [47.4851, 8.2040], content: "Every July, the children of Brugg march with hazel rods adorned with flowers. While appearing as a charming pageant, its roots lie in a 16th-century civilian defense exercise.", type: "Ritual" },
+            { id: 12, title: "Poisoner’s Sword", subject: "Capital Punishment", coords: [47.4856, 8.2078], content: "In the 18th century, Barbara Obrist was condemned for poisoning her husband. Her execution by sword left an indelible dark mark on the town’s judicial history.", type: "Dark Event" },
+            { id: 13, title: "Red House Tragedy", subject: "Accidental Burial", coords: [47.4849, 8.2065], content: "During construction, the owner perished in a black cellar. The structure was completed over his body, trapping his spirit within the foundation.", type: "Ghost" },
+            { id: 14, title: "Blood-Stained Meadow", subject: "Regicide", coords: [47.4806, 8.2183], content: "In 1308, King Albrecht I was assassinated in the fields of Windisch. Legends persist that the grass once grew a distinctive shade of crimson, nourished by royal blood.", type: "Historical" },
+            { id: 15, title: "Bridge of Whispers", subject: "Liminal Phenomena", coords: [47.4908, 8.2325], content: "At the Water Castle convergence, the atmosphere grows unnervingly heavy. Ancient lore suggests the currents claim the souls of those who tarry.", type: "Myth" },
+            { id: 16, title: "The Black Cat", subject: "Forest Maze Sentinel", coords: [47.4915, 8.2045], content: "A black cat that perches on shoulders of travelers in the woods. As long as it sits there, the traveler is cursed to wander the forest, unable to find the exit.", type: "Creature" },
+            { id: 17, title: "The Night Folk", subject: "Spectral Procession", coords: [46.9631, 9.4419], content: "In Vättis, a spectral procession of the recently deceased emerges. One witness recognized his own double; within six weeks, the plague claimed 134 victims.", type: "Creature", sector: "Vättis" },
+            { id: 18, title: "The Devil’s Bridge", subject: "Demonic Compact", coords: [46.6475, 8.5925], content: "Unable to span the Schöllenen Gorge, farmers invoked the Devil. Outsmarted by a goat, the Devil tried to crush the bridge with a boulder; the stone still rests in Göschenen.", type: "Creature", sector: "Schöllenen" },
+            { id: 19, title: "The Black Spider", subject: "Demonic Infestation", coords: [47.0275, 7.7264], content: "In Sumiswald, a demonic pact resulted in venomous arachnids bursting from a woman’s skin. The spider remains sealed inside a wooden window post at a local farmhouse.", type: "Creature", sector: "Sumiswald" }
         ];
 
-        // Moved zoom control to topright to avoid overlapping mobile UI
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([47.485, 8.210], 15);
+        const BRUGG_CENTER = [47.485, 8.210];
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView(BRUGG_CENTER, 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
         L.control.zoom({ position: 'topright' }).addTo(map);
+
+        const markers = [];
 
         function openEvent(event) {
             document.getElementById('eventTitle').innerText = event.title;
@@ -267,23 +303,16 @@
             document.getElementById('eventCoords').innerText = `${event.coords[0].toFixed(4)}, ${event.coords[1].toFixed(4)}`;
             document.getElementById('eventContent').innerText = event.content;
             document.getElementById('sidePanel').classList.remove('hidden');
-            
-            // Hide manifest when opening detail
             document.getElementById('manifestPanel').classList.add('hidden');
-
-            // Mobile Optimization: Hide Header
             const header = document.getElementById('mainHeader');
             header.classList.add('opacity-0');
             header.style.pointerEvents = 'none';
-
             const titleEl = document.getElementById('eventTitle');
             titleEl.style.color = (event.type === 'Creature') ? 'var(--accent-hazard)' : 'var(--accent)';
         }
 
         function closePanel() { 
             document.getElementById('sidePanel').classList.add('hidden'); 
-            
-            // Show Header again
             const header = document.getElementById('mainHeader');
             header.classList.remove('opacity-0');
             header.style.pointerEvents = 'auto';
@@ -292,21 +321,20 @@
         function toggleManifest() { 
             const manifest = document.getElementById('manifestPanel');
             manifest.classList.toggle('hidden'); 
-            
-            // Ensure detail panel is hidden when manifest opens
-            if (!manifest.classList.contains('hidden')) {
-                document.getElementById('sidePanel').classList.add('hidden');
-            }
+            if (!manifest.classList.contains('hidden')) document.getElementById('sidePanel').classList.add('hidden');
+        }
+
+        function returnToBrugg() {
+            map.flyTo(BRUGG_CENTER, 15, { duration: 2 });
+            closePanel();
         }
 
         const manifestList = document.getElementById('manifestList');
         events.forEach(event => {
             const isHazard = event.type === 'Creature';
-            const iconClass = isHazard ? 'marker-pulse-hazard' : 'marker-pulse';
-            
             const icon = L.divIcon({
                 className: 'custom-div-icon',
-                html: `<div class="${iconClass}"></div>`,
+                html: `<div class="${isHazard ? 'marker-pulse-hazard' : 'marker-pulse'}"></div>`,
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
@@ -315,10 +343,12 @@
                 map.flyTo(event.coords, 17, { duration: 1.5 });
                 openEvent(event);
             });
+            markers.push({ marker, event });
 
             const item = document.createElement('div');
             item.className = 'manifest-item';
-            item.innerHTML = `<span>${event.id < 10 ? '0' + event.id : event.id} // ${event.title}</span>`;
+            const tag = event.sector ? `<span class="opacity-40 text-[9px] ml-1">[${event.sector}]</span>` : '';
+            item.innerHTML = `<span>${event.id < 10 ? '0' + event.id : event.id} // ${event.title}${tag}</span>`;
             item.onclick = () => {
                 map.flyTo(event.coords, 16, { duration: 2 });
                 openEvent(event);
@@ -326,13 +356,72 @@
             manifestList.appendChild(item);
         });
 
+        // Directional Indicators Logic
+        function updateIndicators() {
+            const container = document.getElementById('indicators');
+            const returnBox = document.getElementById('returnBox');
+            container.innerHTML = '';
+            
+            const bounds = map.getBounds();
+            const center = map.getCenter();
+            
+            // Check if we are "In Brugg" (Center distance check)
+            const distToBrugg = Math.sqrt(Math.pow(center.lat - BRUGG_CENTER[0], 2) + Math.pow(center.lng - BRUGG_CENTER[1], 2));
+            const isInsideBruggArea = distToBrugg < 0.05; // Roughly 5km radius check
+
+            if (isInsideBruggArea) {
+                returnBox.classList.add('hidden');
+                
+                // Only show triangles for 17, 18, 19
+                const targetIds = [17, 18, 19];
+                markers.forEach(({ marker, event }) => {
+                    if (targetIds.includes(event.id)) {
+                        const pos = marker.getLatLng();
+                        if (!bounds.contains(pos)) {
+                            const angle = Math.atan2(pos.lat - center.lat, pos.lng - center.lng);
+                            const deg = (angle * 180 / Math.PI);
+                            
+                            const triangle = document.createElement('div');
+                            triangle.className = 'edge-triangle';
+                            
+                            const padding = 60;
+                            const w = window.innerWidth;
+                            const h = window.innerHeight;
+                            
+                            let x = (w/2) + (Math.cos(angle) * w/2.2);
+                            let y = (h/2) - (Math.sin(angle) * h/2.2);
+                            
+                            x = Math.max(padding, Math.min(w - padding, x));
+                            y = Math.max(padding, Math.min(h - padding, y));
+
+                            triangle.style.left = `${x}px`;
+                            triangle.style.top = `${y}px`;
+                            triangle.style.transform = `translate(-50%, -50%) rotate(${90-deg}deg)`;
+                            
+                            triangle.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                map.flyTo(event.coords, 16, { duration: 2 });
+                                openEvent(event);
+                            });
+                            
+                            container.appendChild(triangle);
+                        }
+                    }
+                });
+            } else {
+                // We are outside Brugg
+                returnBox.classList.remove('hidden');
+            }
+        }
+
+        map.on('move zoom', updateIndicators);
         map.on('click', (e) => {
-            // Check if click target is the map itself
             if (e.originalEvent.target.id === 'map' || e.originalEvent.target.classList.contains('leaflet-container')) {
                 closePanel();
                 document.getElementById('manifestPanel').classList.add('hidden');
             }
         });
+
+        window.addEventListener('resize', updateIndicators);
+        updateIndicators();
     </script>
-</body>
-</html>
