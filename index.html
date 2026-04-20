@@ -87,16 +87,23 @@
                 width: 100%;
                 max-width: 100%;
                 border-radius: 20px 20px 0 0;
-                max-height: 70vh;
+                max-height: 60vh;
                 padding: 20px;
             }
             #sidePanel.hidden { transform: translateY(100%); }
+            
             #manifestPanel {
-                top: 100px;
-                left: 10px;
-                right: 10px;
-                width: auto;
-                max-height: calc(100vh - 120px);
+                top: 85px; /* Moved up to allow more room */
+                left: 5%;
+                right: 5%;
+                width: 90%;
+                padding: 16px;
+                max-height: calc(100svh - 120px); /* Use svh for mobile chrome */
+            }
+
+            .manifest-item {
+                padding: 8px 0 !important; /* More compact on mobile */
+                font-size: 10px !important;
             }
         }
 
@@ -107,7 +114,7 @@
             height: 0; 
             border-left: 10px solid transparent;
             border-right: 10px solid transparent;
-            border-bottom: 16px solid #FFFFFF; /* Solid White */
+            border-bottom: 16px solid #FFFFFF; 
             z-index: 1500;
             opacity: 0.8;
             pointer-events: auto;
@@ -166,7 +173,8 @@
         }
 
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--accent); }
+        ::-webkit-scrollbar-track { background: rgba(107, 255, 138, 0.05); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
 
         .manifest-item {
             border-bottom: 1px solid rgba(107, 255, 138, 0.1);
@@ -219,16 +227,16 @@
 
     <div id="map"></div>
 
-    <!-- Directional Indicators Container -->
     <div id="indicators"></div>
 
     <!-- Manifest Navigation -->
     <div id="manifestPanel" class="side-panel hidden">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-center mb-4">
             <h3 class="text-sm font-bold text-[#6BFF8A] tech-font">Data Manifest</h3>
-            <button onclick="toggleManifest()" class="text-[10px] opacity-50 hover:opacity-100 p-2">[ HIDE ]</button>
+            <button onclick="toggleManifest()" class="text-[10px] opacity-50 hover:text-white p-2">[ HIDE ]</button>
         </div>
-        <div id="manifestList" class="overflow-y-auto pr-2"></div>
+        <div id="manifestList" class="overflow-y-auto pr-2 scroll-smooth"></div>
+        <div class="text-[8px] opacity-30 mt-2 text-center tech-font block sm:hidden">↓ SCROLL FOR MORE ENTRIES ↓</div>
     </div>
 
     <!-- Detail Panel -->
@@ -259,7 +267,6 @@
             </button>
         </div>
         
-        <!-- Return to Brugg Button (Hidden by default) -->
         <div id="returnBox" class="hidden mt-2">
             <button onclick="returnToBrugg()" class="btn-return">
                 RETURN TO BRUGG
@@ -356,23 +363,18 @@
             manifestList.appendChild(item);
         });
 
-        // Directional Indicators Logic
         function updateIndicators() {
             const container = document.getElementById('indicators');
             const returnBox = document.getElementById('returnBox');
             container.innerHTML = '';
-            
             const bounds = map.getBounds();
             const center = map.getCenter();
             
-            // Check if we are "In Brugg" (Center distance check)
             const distToBrugg = Math.sqrt(Math.pow(center.lat - BRUGG_CENTER[0], 2) + Math.pow(center.lng - BRUGG_CENTER[1], 2));
-            const isInsideBruggArea = distToBrugg < 0.05; // Roughly 5km radius check
+            const isInsideBruggArea = distToBrugg < 0.05;
 
             if (isInsideBruggArea) {
                 returnBox.classList.add('hidden');
-                
-                // Show triangles for 18 and 19 (External items in the current list)
                 const targetIds = [18, 19];
                 markers.forEach(({ marker, event }) => {
                     if (targetIds.includes(event.id)) {
@@ -380,36 +382,28 @@
                         if (!bounds.contains(pos)) {
                             const angle = Math.atan2(pos.lat - center.lat, pos.lng - center.lng);
                             const deg = (angle * 180 / Math.PI);
-                            
                             const triangle = document.createElement('div');
                             triangle.className = 'edge-triangle';
-                            
                             const padding = 60;
                             const w = window.innerWidth;
                             const h = window.innerHeight;
-                            
                             let x = (w/2) + (Math.cos(angle) * w/2.2);
                             let y = (h/2) - (Math.sin(angle) * h/2.2);
-                            
                             x = Math.max(padding, Math.min(w - padding, x));
                             y = Math.max(padding, Math.min(h - padding, y));
-
                             triangle.style.left = `${x}px`;
                             triangle.style.top = `${y}px`;
                             triangle.style.transform = `translate(-50%, -50%) rotate(${90-deg}deg)`;
-                            
                             triangle.addEventListener('click', (e) => {
                                 e.stopPropagation();
                                 map.flyTo(event.coords, 16, { duration: 2 });
                                 openEvent(event);
                             });
-                            
                             container.appendChild(triangle);
                         }
                     }
                 });
             } else {
-                // We are outside Brugg center
                 returnBox.classList.remove('hidden');
             }
         }
